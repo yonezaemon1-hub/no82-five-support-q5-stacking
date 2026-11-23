@@ -1,0 +1,154 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=24mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,booktabs,tabularx,enumitem}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newcommand{\stack}{\operatorname{stack}}
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\Q}{Q}
+\newcommand{\C}{\mathcal C}
+\setlist[itemize]{leftmargin=*}
+\title{A Computer-Assisted Stacking Theorem for Five-Point Supports on the Five-Dimensional Hypercube}
+\author{Ryutaro Yonezu}
+\date{Publication candidate v1.0 --- 23 November 2026}
+\begin{document}
+\maketitle
+\begin{center}\small\textcolor{red!65!black}{UNREFEREED PREPRINT CANDIDATE --- INDEPENDENT AI AUDIT REPORTED PASS --- NOVELTY INCONCLUSIVE}\end{center}
+\begin{abstract}
+For the ordinary graph pebbling operation, two pebbles at one vertex are replaced by one pebble at an adjacent vertex. A configuration is \emph{stackable} if a finite sequence of legal operations leaves its support at a single vertex. We give a finite, computer-assisted proof framework for the following restricted statement: every configuration of 63 pebbles on exactly five occupied vertices of the five-dimensional hypercube $Q_5$ is stackable. The argument reduces 177,312 support sets to a four-cube result by an analytic singleton-separation lemma, partitions the remaining 24,064 supports into 22 hypercube-automorphism orbits, and verifies an exhaustive partition of their positive allocations. In the last 236 representative allocations, 214 are reduced by explicit legal moves to a $Q_4$ face containing at least 31 pebbles, while 22 are stacked directly. All 6,963 moves of these certificates were independently replayed by Python and C++ implementations. The conclusion depends on a separate computer-assisted verification of $\stack(Q_4)=31$ and earlier exhaustive checks; we state these dependencies explicitly. Neither a general result for all $Q_5$ configurations nor the formula for arbitrary hypercube dimension is established. Novelty clearance is incomplete.
+\end{abstract}
+
+\section{Definitions and exact claim}
+Let $Q_n$ have vertex set $\{0,1\}^n$ with edges between binary words of Hamming distance one. A configuration $C$ assigns a nonnegative integer $C(v)$ to each vertex; its mass is $|C|=\sum_v C(v)$, and its occupied support is $\supp(C)=\{v:C(v)>0\}$. A legal move $u\to v$ along an edge decreases $C(u)$ by two and increases $C(v)$ by one, and hence reduces the total mass by one. The stacking number $\stack(G)$ is the least $t\ge 2$ for which every mass-$t$ configuration on $G$ is stackable \cite{CS2026}.
+
+The main result below is a \emph{finite computer-assisted theorem with explicit certificate dependencies}. An independent AI auditor separately reported PASS for the mathematical components by reimplementation; this is not formal verification or human peer review. The reproducibility and provenance boundaries are listed in Section~\ref{sec:cert}.
+
+\begin{theorem}[Five-point support, computer-assisted, conditional on the stated finite certificates]\label{thm:main}
+Let $C$ be a configuration on $Q_5$ with $|C|=63$ and $|\supp(C)|=5$. Assuming validity of the $Q_4$ exhaustive certificate establishing $\stack(Q_4)=31$, and the indicated finite classification and replay certificates, $C$ is stackable.
+\end{theorem}
+
+The restriction $|\supp(C)|=5$ is essential to the present proof. Theorem~\ref{thm:main} says nothing about configurations supported on six or more vertices, the full identity $\stack(Q_5)=63$, or the proposed formula $\stack(Q_n)=2^{n+1}-1$ for all $n$.
+
+\section{Analytic reductions}
+The first two lemmas are elementary but avoid a subtle pitfall: adding pebbles to \emph{one particular} stackable configuration need not preserve stackability. The appropriate monotonicity statement concerns \emph{all} configurations at a fixed threshold.
+
+\begin{lemma}[Monotonicity of a universal stacking threshold]\label{lem:monotone}
+If $G$ is connected with $N$ vertices, every configuration of $t\ge N$ pebbles is stackable, and $M\ge t$, then every configuration of $M$ pebbles is stackable.
+\end{lemma}
+\begin{proof}
+While more than $t$ pebbles remain, there are at least $N+1$ pebbles on $N$ vertices, so some vertex has at least two. Move one pebble along an incident edge, reducing the mass by one. After $M-t$ moves, apply the assumed universal statement at mass $t$. The one-vertex case is immediate.
+\end{proof}
+
+\begin{lemma}[Singleton separation for at most six occupied vertices]\label{lem:single}
+Suppose $n\ge3$, $|C|=2^{n+1}-1$, and $2\le|\supp(C)|\le6$. If there is a coordinate such that one $Q_{n-1}$ face contains exactly one occupied vertex and the opposite face contains all other occupied vertices, then legal moves empty the singleton side while leaving at least $2^n-1$ pebbles in the other face.
+\end{lemma}
+\begin{proof}
+Write $D=2^{n-1}$ and let $u$ be the unique occupied vertex on face $F_1$, with $b=C(u)$; let $v$ be its corresponding vertex of $F_0$. There are $m\le5$ distinct occupied vertices $x_i$ of $F_0$ with pebble counts $a_i>0$ and transport costs $w_i=2^{d(x_i,v)}\le D$. At most one $w_i$ equals $D$; all others are at most $D/2$. Delivering one pebble from $x_i$ to $v$ along a shortest path needs $w_i$ pebbles at $x_i$, takes $w_i-1$ moves, and restores the previous pebble counts at intermediate vertices.
+
+If $b=1$, two delivered pebbles at $v$ allow the two moves $v\to u\to v$ to empty $F_1$. If two deliveries were impossible, $\sum_i\lfloor a_i/w_i\rfloor\le1$, and hence
+\[
+ \sum_i a_i \le \sum_i(w_i-1)+\max_i w_i
+ \le D+(m-1)D/2+D-m \le 4D-5.
+\]
+Yet $\sum_i a_i=4D-2$, a contradiction. The deliveries take at most $2(D-1)$ moves, followed by two crossing moves, leaving at least $4D-1-2(D-1)-2=2D-1$ pebbles.
+
+If $b=3$, one delivered pebble suffices for $u\to v$, $v\to u$, $u\to v$. If no delivery were possible, then $\sum_i a_i\le\sum_i(w_i-1)\le3D-5$, contradicting $\sum_i a_i=4D-4$. At most $D-1$ transport moves plus three crossing moves leave at least $3D-3\ge2D-1$ pebbles.
+
+If $b=2k$, use $k$ moves $u\to v$. At least $4D-1-k\ge2D-1$ pebbles remain because each of the other occupied vertices is nonempty. If $b=2k+1\ge5$, use $k$ such moves and then $v\to u\to v$, leaving at least $4D-1-(k+2)\ge2D-1$. All moves are legal. (The case $m=1$ obeys the same elementary bounds; for $D\ge4$ the displayed maxima are nondecreasing in $m$.)
+\end{proof}
+
+A constant coordinate immediately places all pebbles on one $Q_4$ face. Otherwise, by Lemma~\ref{lem:single} the $Q_5$ five-point supports with a $1$--$4$ coordinate split also reduce to a four-dimensional face with at least 31 pebbles, where the $Q_4$ certificate and Lemma~\ref{lem:monotone} apply.
+
+\section{Support-orbit partition of the remaining instances}
+There are $\binom{32}{5}=201{,}376$ five-point supports in $Q_5$, and $\binom{62}{4}=557{,}845$ strictly positive distributions of mass 63 on each specified support, for a total of
+\[
+\binom{32}{5}\binom{62}{4}=112{,}336{,}594{,}720.\tag{1}
+\]
+A direct enumeration of all five-point subsets, classifying each coordinate into $(0,5)$ (constant), $(1,4)$ (singleton separation), or $(2,3)$ (balanced), gives:
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Support class & Number of supports\\\midrule
+Constant or singleton-separating coordinate & 177,312\\
+Every coordinate a $2$--$3$ split & 24,064\\\midrule
+Total & 201,376\\\bottomrule
+\end{tabular}
+\end{center}
+
+The $24{,}064$ balanced supports form exactly 22 orbits under the order-$32\cdot5!$ hypercube automorphism group (coordinate permutations and coordinate bit flips). The orbit sizes, each verified by constructing the entire image set and checking disjointness, are seven orbits of size 1920, eight of size 960, and seven of sizes 640, 480, 480, 384, 320, 320, 320. Their total is $24{,}064$.
+
+Each orbit is represented by an ordered, canonical tuple of five vertices. For each representative we enumerate all 557,845 positive five-part compositions of 63. The move algorithms and certificates act on ordered representative configurations; applying an automorphism transfers each legal move to its image and preserves stackability. The following mutually exclusive categories cover every balanced-support allocation.
+
+\begin{center}\small
+\begin{tabularx}{\linewidth}{Xr}
+\toprule
+Certificate category & Weighted configurations\\\midrule
+Immediate fold or fold after at most two legal preparation moves & 13,408,524,160\\
+Additional v1.4 explicit preparation-and-fold move certificates & 15,259,840\\
+Almost-stacked configurations embedded in a ten-cycle & 3,520\\
+New v1.5 finite move certificates & 194,560\\\midrule
+\textbf{Total on balanced supports} & \textbf{13,423,982,080}\\\bottomrule
+\end{tabularx}
+\end{center}
+
+For the ten-cycle category, five occupied vertices lie on a simple cycle of length ten; the allocations are permutations of $(59,1,1,1,1)$. The original proof invoked the published almost-stacked cycle theorem \cite{CSASH}. The independent AI audit additionally reported discovering and replaying a direct legal stacking sequence for each of these five canonical instances, removing the need to invoke that literature result for these five computational cases. We do \emph{not} assume the general Almost Stacked Hypothesis.
+
+\section{Explicit v1.5 certificates}
+The difference between the archived v1.4 unresolved set and the archived previously solved rows, after excluding the five ten-cycle cases, is exactly 236 canonical allocations, representing 194,560 actual configurations. A separate Python checker reconstructs this set difference and the orbit sizes from the canonical files.
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Method & Representatives & Weighted configurations\\\midrule
+Supply and fold to a $Q_4$ face with $\ge31$ pebbles & 214 & 183,200\\
+Direct stacking by rooted-tree moves & 4 & 1,280\\
+Direct stacking by staged integer-program moves & 18 & 10,080\\\midrule
+Total & 236 & 194,560\\\bottomrule
+\end{tabular}
+\end{center}
+
+Each certificate records the initial five occupied vertices and multiplicities, the ordered legal moves, and the final 32-entry pebble vector. The verifier checks before every move that the source has at least two pebbles and the endpoints differ in exactly one coordinate, then updates the entire state. The final vector must match the recorded vector exactly. In 214 cases every surviving pebble is confined to a single $Q_4$ face and at least 31 remain; the previously certified universal $Q_4$ threshold gives the final stack. In 22 cases the final support already has cardinality one in $Q_5$. Independent Python and C++17 replay programs verify all 236 records, comprising exactly 6,963 ordered legal operations; illegal moves: zero.
+
+The 18 staged schedules were \emph{discovered} by optimization. Solver optimality, floating-point tolerances, and the existence of an integer solution are \emph{not} used as evidence; only their exact integer move sequences, independently replayed, are used.
+
+\section{The four-cube dependency}\label{sec:q4}
+The principal remaining mathematical dependency is the separate computational proof for
+\[
+\stack(Q_4)=31.\tag{2}
+\]
+The lower bound is already implied by the path result $\stack(P_5)=31$ and the Hamming-weight graph projection \cite{CS2026}. The upper-bound certificate divides the $\binom{46}{15}=511{,}738{,}760{,}544$ configurations of 31 pebbles into two disjoint classes:
+\begin{center}\small
+\begin{tabularx}{\linewidth}{Xr}
+\toprule
+Classification and certificate method & Number of configurations\\\midrule
+Some coordinate has a 9--22 split; exhaustive $Q_3$ terminal-profile merging and exceptional injection & 511,071,924,688\\
+All four coordinates have a side with at most 8 pebbles; exact enumeration over a unique majority center, followed by fold, donor, and path-bridge sufficient conditions and 18 terminal certificates & 666,835,856\\\midrule
+Total & 511,738,760,544\\\bottomrule
+\end{tabularx}
+\end{center}
+
+The second count equals $16\cdot41{,}677{,}241$, where the latter is a direct exact integer enumeration in one fixed majority-center coordinate frame. Of those $41{,}677{,}241$ instances, initial fold/donor procedures accept $41{,}641{,}920$; graph paths with temporary relay vertices accept a further $35{,}303$; and explicit move certificates stack the last 18 directly. The exhaustive computations are encoded in the separate frozen $Q_4$ archive, which also holds the preceding $Q_3$ proof and the ten halfcube profile cases. The full $Q_4$ proof is \emph{computer assisted}; it is not a short handwritten closed-form proof. A checker run plus mathematical inspection of the constructive sufficient conditions, not a numerical sample, is the claimed evidence.
+
+\section{Reproducibility, audit boundaries, and nonclaims}\label{sec:cert}
+All archived computations are finite integer or exact-state computations. The standalone private evidence bundle includes:
+\begin{itemize}
+\item Frozen $Q_4$ v0.5, $Q_5$ v1.4, and $Q_5$ v1.5 archives, retained byte-for-byte with SHA-256 fingerprints.
+\item An external-audit addendum with a separately written C++ enumerator that reproduces the v1.4 unresolved binary records \emph{byte for byte} (17,737 six-byte rows, 106,422 bytes).
+\item Two independent v1.5 move replay implementations, support-orbit enumeration and row-identity checks, and a Windows PowerShell 5.1 reproducibility entrypoint.
+\item Inherited analytic singleton-separation proof as a separate preserved document.
+\end{itemize}
+
+The internal Linux-based replay and finite tests passed. The author reported a Windows 10 PowerShell run on 23 November 2026 ending in \texttt{NO82 WINDOWS LOCAL REPRODUCTION PASS}; the pasted console transcript is retained in the accompanying audit archive. An independently written AI audit reported PACKAGE, MODEL, ANALYTIC LEMMAS, Q4 COMPUTATIONAL COVERAGE, Q5 ORBIT AND PARTITION, MOVE CERTIFICATES, and CONDITIONAL THEOREM as PASS. The auditor reported using independently written code rather than executing the author's source code. Its code and outputs are attached. This independent AI assessment does \emph{not} constitute human peer review or formal proof. The auditor did not obtain the original Windows log and marked Windows provenance INCONCLUSIVE despite the author's successful run. The narrow novelty search found no direct duplicate but was not exhaustive: \emph{novelty inconclusive, references partial}. The general formula and the complete five-cube threshold remain unproved. This manuscript and evidence are packaged as a publication candidate only; no public upload has been authorized.
+
+\begin{thebibliography}{9}
+\bibitem{CS2026} T. Csern\'ak and L. Soukup, \emph{Stacking and clearing in graph pebbling}, arXiv:2604.22341 (2026), \url{https://arxiv.org/abs/2604.22341}.
+\bibitem{CSASH} T. Csern\'ak and L. Soukup, \emph{The Almost Stacked Hypothesis: A Conjectural Analogue of Sj\"ostrand's Cover Pebbling Theorem}, arXiv:2610.09650 (2026), \url{https://arxiv.org/abs/2610.09650}.
+\bibitem{Tree2026} J. Fairfax-Ball, \emph{The stacking number of a tree}, arXiv:2609.31811 (2026), \url{https://arxiv.org/abs/2609.31811}.
+\end{thebibliography}
+
+\end{document}
